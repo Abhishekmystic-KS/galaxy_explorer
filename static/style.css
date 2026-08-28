@@ -478,3 +478,145 @@ a:hover {
   max-height: 100%;
   object-fit: contain;
 }
+
+/* Stepper styles mimicking the reference tracker */
+.status-tracker-title {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.status-tracker-title h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.status-tracker-title p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.stepper-card {
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--bg-white);
+  padding: 2.5rem 2.5rem 1.75rem;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--box-shadow);
+}
+
+.stepper-list {
+  position: relative;
+  padding-left: 2rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  text-align: left;
+}
+
+.stepper-list::before {
+  content: "";
+  position: absolute;
+  left: 9px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background-color: var(--border-light);
+  z-index: 1;
+}
+
+.stepper-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  z-index: 2;
+}
+
+.stepper-circle {
+  position: absolute;
+  left: -2rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-white);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: transparent;
+  transition: var(--transition);
+}
+
+.stepper-item.completed .stepper-circle {
+  background-color: #27ae60;
+  border-color: #27ae60;
+  color: #ffffff;
+}
+
+.stepper-item.active .stepper-circle {
+  background-color: var(--bg-navy-dark);
+  border-color: var(--bg-navy-dark);
+}
+
+.stepper-item.active .stepper-circle::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ffffff;
+}
+
+.stepper-content {
+  padding-left: 0.75rem;
+}
+
+.stepper-content h3 {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.2;
+  transition: var(--transition);
+}
+
+.stepper-item.completed .stepper-content h3 {
+  color: #27ae60;
+}
+
+.stepper-item.active .stepper-content h3 {
+  color: var(--text-dark);
+  font-weight: 600;
+}
+
+.stepper-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+/* Horizontal stepper sub-bar */
+.stepper-progress-box {
+  border-top: 1px solid var(--border-light);
+  padding-top: 1.25rem;
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.stepper-progress-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-dark);
+  margin-bottom: 0.5rem;
+}
+
+.stepper-progress-percentage {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+}
+

@@ -3,23 +3,75 @@
 {% block title %}Analyzing... - Galaxy Intelligence Platform{% endblock %}
 
 {% block content %}
-<div class="status-container">
-    <div class="status-spinner" id="spinner"></div>
-    <h1 style="font-size: 2rem; margin-bottom: 0.5rem;" id="title-text">Running Galaxy Analysis</h1>
-    <p style="color: var(--text-muted);" id="sub-text">Analyzing query: <strong>{{ job.query }}</strong></p>
-    
-    <div class="progress-bar-container">
-        <div class="progress-bar-fill" id="progress-bar" style="width: {{ job.progress }}%"></div>
+<div class="status-tracker-title">
+    <h1 id="title-text">Analyzing {{ job.query }}</h1>
+    <p id="job-id-text">{{ job.job_id }}</p>
+</div>
+
+<div class="stepper-card">
+    <div class="stepper-list">
+        <!-- Step 1 -->
+        <div class="stepper-item" id="step-1">
+            <div class="stepper-circle"><i class="fa-solid fa-check"></i></div>
+            <div class="stepper-content">
+                <h3>Resolving coordinates</h3>
+                <p class="stepper-desc">Querying SIMBAD & NED catalogs</p>
+            </div>
+        </div>
+        
+        <!-- Step 2 -->
+        <div class="stepper-item" id="step-2">
+            <div class="stepper-circle"><i class="fa-solid fa-check"></i></div>
+            <div class="stepper-content">
+                <h3>Downloading FITS datasets</h3>
+                <p class="stepper-desc">Retrieving imagery & spectra from SDSS/DESI</p>
+            </div>
+        </div>
+        
+        <!-- Step 3 -->
+        <div class="stepper-item" id="step-3">
+            <div class="stepper-circle"><i class="fa-solid fa-check"></i></div>
+            <div class="stepper-content">
+                <h3>Extracting FITS parameters</h3>
+                <p class="stepper-desc">Parsing headers & computing photometry</p>
+            </div>
+        </div>
+        
+        <!-- Step 4 -->
+        <div class="stepper-item" id="step-4">
+            <div class="stepper-circle"><i class="fa-solid fa-check"></i></div>
+            <div class="stepper-content">
+                <h3>Generating offline reports</h3>
+                <p class="stepper-desc">Embedding Base64 cutouts & Chart.js plots</p>
+            </div>
+        </div>
+        
+        <!-- Step 5 -->
+        <div class="stepper-item" id="step-5">
+            <div class="stepper-circle"><i class="fa-solid fa-check"></i></div>
+            <div class="stepper-content">
+                <h3>Generating reproduction code</h3>
+                <p class="stepper-desc">Compiling offline Matplotlib Python scripts</p>
+            </div>
+        </div>
     </div>
     
-    <p class="status-step" id="step-message">{{ job.step_message or 'Queued...' }}</p>
-    <p style="font-size: 0.85rem; color: var(--text-dim);" id="job-id-text">Job ID: {{ job.job_id }}</p>
-    
-    <div id="error-container" style="display: none; margin-top: 2rem; padding: 1rem; background: rgba(255, 71, 87, 0.1); border: 1px solid var(--accent); border-radius: 8px; text-align: left;">
-        <h3 style="color: var(--accent); margin-bottom: 0.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Analysis Failed</h3>
-        <p style="font-size: 0.9rem; color: var(--text-main);" id="error-message"></p>
-        <a href="/" class="btn" style="margin-top: 1rem; width: 100%; justify-content: center; padding: 0.8rem 1rem;">
-            <i class="fa-solid fa-arrow-left"></i> Return to Dashboard
+    <div class="stepper-progress-box">
+        <div class="stepper-progress-label" id="step-message">{{ job.step_message or 'Initializing pipeline...' }}</div>
+        
+        <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progress-bar" style="width: {{ job.progress }}%"></div>
+        </div>
+        
+        <div class="stepper-progress-percentage" id="progress-percent">{{ job.progress }}%</div>
+    </div>
+
+    <!-- Error Banner -->
+    <div id="error-container" style="display: none; margin-top: 1.5rem; padding: 1rem; background: rgba(235, 87, 87, 0.08); border: 1px solid rgba(235, 87, 87, 0.2); border-radius: 8px; text-align: left;">
+        <h3 style="color: var(--accent-red); font-size: 0.95rem; margin-bottom: 0.25rem;"><i class="fa-solid fa-triangle-exclamation"></i> Analysis Failed</h3>
+        <p style="font-size: 0.85rem; color: var(--text-dark);" id="error-message"></p>
+        <a href="/" class="btn btn-secondary" style="margin-top: 1rem; width: 100%; justify-content: center; padding: 0.6rem 1rem; font-size: 0.85rem;">
+            Return to Dashboard
         </a>
     </div>
 </div>
@@ -29,44 +81,83 @@
 <script>
     const jobId = "{{ job.job_id }}";
     
+    function updateStepperUI(progress) {
+        // Steps bounds configuration
+        // Step 1: z crossmatch [progress starts at 10]
+        // Step 2: download fits [progress starts at 50]
+        // Step 3: parse fits [progress starts at 70]
+        // Step 4: generate html report [progress starts at 85]
+        // Step 5: generate matplotlib script [progress starts at 95]
+        
+        const steps = [
+            { id: "step-1", start: 10, end: 50 },
+            { id: "step-2", start: 50, end: 70 },
+            { id: "step-3", start: 70, end: 85 },
+            { id: "step-4", start: 85, end: 95 },
+            { id: "step-5", start: 95, end: 100 }
+        ];
+        
+        steps.forEach((step, idx) => {
+            const el = document.getElementById(step.id);
+            if (!el) return;
+            
+            // Remove previous state classes
+            el.classList.remove("completed", "active", "pending");
+            
+            if (progress >= step.end) {
+                el.classList.add("completed");
+            } else if (progress >= step.start) {
+                el.classList.add("active");
+            } else {
+                el.classList.add("pending");
+            }
+        });
+    }
+
     async function pollStatus() {
         try {
             const response = await fetch(`/api/status/${jobId}`);
             if (!response.ok) {
-                throw new Error("HTTP error " + response.status);
+                throw new Error("HTTP status " + response.status);
             }
             const data = await response.json();
             
-            // Update UI elements
+            // Update percentage and sub bar
             document.getElementById("progress-bar").style.width = data.progress + "%";
+            document.getElementById("progress-percent").innerText = data.progress + "%";
             document.getElementById("step-message").innerText = data.step_message || "Processing...";
+            
+            // Update stepper lists
+            updateStepperUI(data.progress);
             
             if (data.status === "completed") {
                 // Done! Reload page to show result
-                window.location.reload();
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             } else if (data.status === "failed") {
-                // Show error
-                document.getElementById("spinner").style.display = "none";
-                document.getElementById("title-text").innerText = "Analysis Failed";
-                document.getElementById("step-message").style.display = "none";
-                
-                document.getElementById("error-message").innerText = data.error_message || "An unknown error occurred during FITS compilation.";
+                // Show failure state
+                document.getElementById("step-message").innerText = "Failed";
+                document.getElementById("error-message").innerText = data.error_message || "An error occurred during dataset analysis.";
                 document.getElementById("error-container").style.display = "block";
             } else {
                 // Continue polling
-                setTimeout(pollStatus, 2000);
+                setTimeout(pollStatus, 1500);
             }
         } catch (error) {
             console.error("Polling error:", error);
-            document.getElementById("step-message").innerText = "Connection lost. Re-trying...";
+            document.getElementById("step-message").innerText = "Connecting to pipeline...";
             setTimeout(pollStatus, 3000);
         }
     }
     
+    // Set initial stepper states on page load
+    updateStepperUI({{ job.progress }});
+    
     // Start polling if not already finished
     const initialStatus = "{{ job.status }}";
     if (initialStatus === "pending" || initialStatus === "running") {
-        setTimeout(pollStatus, 2000);
+        setTimeout(pollStatus, 1500);
     }
 </script>
 {% endblock %}
