@@ -4,25 +4,26 @@
 
 {% block content %}
 <div class="hero-section">
-    <h1 class="hero-title">Galaxy Intelligence Platform</h1>
-    <p class="hero-subtitle">Look up a galaxy by name or coordinates to fetch FITS imagery, extract physical parameters, perform cross-matching, and compile interactive reports.</p>
-    
-    <div class="search-box">
-        <form action="/job" method="POST">
-            <div class="form-group">
-                <input type="text" name="query" class="input-control" placeholder="Enter galaxy name (e.g. NGC 4321, M51) or Dec coords..." required>
-                <button type="submit" class="btn">
-                    <i class="fa-solid fa-magnifying-glass"></i> Analyze
-                </button>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
-                <p class="search-hint">Examples: <code>NGC 4321</code>, <code>M31</code>, <code>185.728, 15.822</code></p>
-                {% if rate_limited %}
-                <span style="color: var(--accent); font-size: 0.85rem; font-weight: 500;"><i class="fa-solid fa-triangle-exclamation"></i> Rate limit: 5 requests/min</span>
-                {% endif %}
-            </div>
-        </form>
-    </div>
+    <h1 class="hero-title">Galaxy Structure <span>Intelligence</span></h1>
+    <p class="hero-subtitle">Look up a galaxy, pull imaging + spectroscopy data, and visualize sky views — all in one pipeline.</p>
+</div>
+
+<div class="search-box">
+    <form action="/job" method="POST">
+        <label class="form-group-label">Galaxy Name or Coordinates *</label>
+        <div class="form-group">
+            <input type="text" name="query" class="input-control" placeholder="e.g., NGC 4321, M51, or 185.728, 15.822" required>
+            <button type="submit" class="btn">
+                Analyze Galaxy
+            </button>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+            <p class="search-hint">Queries SDSS, Gaia, SIMBAD, and NED archives. Fallback simulated data enabled.</p>
+            {% if rate_limited %}
+            <span style="color: var(--accent-red); font-size: 0.85rem; font-weight: 500;"><i class="fa-solid fa-triangle-exclamation"></i> Rate limit exceeded</span>
+            {% endif %}
+        </div>
+    </form>
 </div>
 
 <div>

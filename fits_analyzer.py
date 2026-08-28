@@ -86,12 +86,25 @@ def analyze_fits_image(filepath: str, output_png_path: str) -> dict:
 
         # Generate PNG cutout
         if image_hdu.data is not None:
-            normalized = normalize_image(image_hdu.data)
-            # Create PNG image (grayscale)
-            img = Image.fromarray(normalized)
-            img.save(output_png_path)
+            data = np.asarray(image_hdu.data)
+            # Squeeze out singleton dimensions (e.g., (1, 256, 256) -> (256, 256))
+            squeezed = np.squeeze(data)
+            
+            if len(squeezed.shape) == 2:
+                normalized = normalize_image(squeezed)
+                img = Image.fromarray(normalized)
+                img.save(output_png_path)
+            elif len(squeezed.shape) == 3:
+                # Multi-band or data cube, take first slice
+                normalized = normalize_image(squeezed[0])
+                img = Image.fromarray(normalized)
+                img.save(output_png_path)
+            else:
+                # 1D or other unexpected shape - generate default placeholder
+                img = Image.new("L", (256, 256), color=10)
+                img.save(output_png_path)
         else:
-            # Generate a blank placeholder image if FITS is somehow empty
+            # Generate a blank placeholder image if FITS is empty
             img = Image.new("L", (256, 256), color=10)
             img.save(output_png_path)
             
