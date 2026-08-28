@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}{{ job.result.name }} Profile - Galaxy Intelligence Platform{% endblock %}
+
+{% block extra_head %}
+<!-- Aladin Lite CSS and JS -->
+<link rel="stylesheet" href="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.css" />
+<script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="profile-header-grid">
+    <div>
+        <h1 style="font-size: 2.8rem; margin-bottom: 0.2rem;">{{ job.result.name }}</h1>
+        <p style="color: var(--text-muted); font-size: 1.1rem;">
+            Source: <span style="color: var(--secondary); font-weight: 600;">{{ job.result.source }}</span> | Resolved via {{ job.result.source }}
+        </p>
+    </div>
+    <div class="profile-actions">
+        <a href="/output/{{ job.job_id }}/{{ job.job_id }}_report.html" download class="btn btn-secondary" title="Download Self-contained HTML Report">
+            <i class="fa-solid fa-file-arrow-down"></i> HTML Report
+        </a>
+        <a href="/output/{{ job.job_id }}/{{ job.job_id }}_reproduce.py" download class="btn" title="Download Reproducible Matplotlib Script">
+            <i class="fa-solid fa-code"></i> Matplotlib Script
+        </a>
+    </div>
+</div>
+
+<div class="profile-grid">
+    <!-- Parameters Panel -->
+    <div class="panel-card">
+        <h2><i class="fa-solid fa-sliders" style="color: var(--primary); margin-right: 0.5rem;"></i> Galaxy Parameters</h2>
+        <table class="property-table">
+            <tr>
+                <td class="property-label">Right Ascension (RA)</td>
+                <td class="property-value">{{ "%.6f"|format(job.result.ra) }}°</td>
+            </tr>
+            <tr>
+                <td class="property-label">Declination (DEC)</td>
+                <td class="property-value">{{ "%.6f"|format(job.result.dec) }}°</td>
+            </tr>
+            <tr>
+                <td class="property-label">Object Classification</td>
+                <td class="property-value">{{ job.result.type or 'Galaxy' }}</td>
+            </tr>
+            <tr>
+                <td class="property-label">Redshift (z)</td>
+                <td class="property-value">{{ job.result.redshift if job.result.redshift is not none else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="property-label">Redshift Error (z_err)</td>
+                <td class="property-value">{{ job.result.redshift_err if job.result.redshift_err is not none else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="property-label">Apparent Magnitude (m)</td>
+                <td class="property-value">{{ job.result.mag if job.result.mag is not none else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="property-label">Photometric Error</td>
+                <td class="property-value">{{ job.result.phot_error if job.result.phot_error is not none else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <td class="property-label">Image Quality Flag</td>
+                <td class="property-value">{{ job.result.image_quality or 'Nominal' }}</td>
+            </tr>
+        </table>
+        
+        <h3 style="font-size: 1.1rem; margin: 1.5rem 0 0.75rem; color: #fff;">Identified Catalog Aliases</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            {% for alias in job.result.aliases %}
+            <span style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); padding: 0.25rem 0.6rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85rem;">
+                {{ alias }}
+            </span>
+            {% else %}
+            <span style="color: var(--text-dim); font-style: italic;">No aliases retrieved.</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Interactive Aladin Lite Sky Map -->
+    <div class="panel-card">
+        <h2><i class="fa-solid fa-compass" style="color: var(--secondary); margin-right: 0.5rem;"></i> Sky View (Aladin Lite)</h2>
+        <div id="aladin-lite-div" class="viewer-container"></div>
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+            <span>Survey: DSS2 Color (Optical)</span>
+            <span>FOV: ~0.15°</span>
+        </div>
+    </div>
+
+    <!-- FITS Cutout Image -->
+    <div class="panel-card">
+        <h2><i class="fa-solid fa-image" style="color: var(--accent); margin-right: 0.5rem;"></i> FITS Image Cutout</h2>
+        <div class="cutout-image-wrapper">
+            <img src="/output/{{ job.job_id }}/{{ job.job_id }}_cutout.png" alt="Galaxy FITS Cutout">
+        </div>
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+            <span>Telescope: {{ job.result.telescope or 'N/A' }}</span>
+            <span>Filter: {{ job.result.filter or 'r' }}</span>
+            <a href="/output/{{ job.job_id }}/{{ job.job_id }}_image.fits" download style="color: var(--secondary); font-weight: 500;">
+                <i class="fa-solid fa-download"></i> Download FITS Image
+            </a>
+        </div>
+    </div>
+
+    <!-- Gaia Astrometry -->
+    <div class="panel-card">
+        <h2><i class="fa-solid fa-star-of-david" style="color: #f1c40f; margin-right: 0.5rem;"></i> Gaia DR3 Astrometry</h2>
+        <table class="property-table">
+            <tr>
+                <td class="property-label">Parallax (parallax)</td>
+                <td class="property-value">{{ "%.4f"|format(job.result.parallax) if job.result.parallax is not none else 'N/A' }} mas</td>
+            </tr>
+            <tr>
+                <td class="property-label">Parallax Error</td>
+                <td class="property-value">{{ "%.4f"|format(job.result.parallax_error) if job.result.parallax_error is not none else 'N/A' }} mas</td>
+            </tr>
+            <tr>
+                <td class="property-label">Proper Motion RA (pmra)</td>
+                <td class="property-value">{{ "%.4f"|format(job.result.pmra) if job.result.pmra is not none else 'N/A' }} mas/yr</td>
+            </tr>
+            <tr>
+                <td class="property-label">Proper Motion DEC (pmdec)</td>
+                <td class="property-value">{{ "%.4f"|format(job.result.pmdec) if job.result.pmdec is not none else 'N/A' }} mas/yr</td>
+            </tr>
+            <tr>
+                <td class="property-label">Gaia G Mean Magnitude</td>
+                <td class="property-value">{{ "%.4f"|format(job.result.phot_g_mean_mag) if job.result.phot_g_mean_mag is not none else 'N/A' }}</td>
+            </tr>
+        </table>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 1rem; line-height: 1.3;">
+            Note: Gaia astrometry provides position accuracy measurements for nearby stars and compact galaxy nuclei. Values are obtained via crossmatch cone-search.
+        </p>
+    </div>
+
+    <!-- Spectroscopic Profile -->
+    <div class="panel-card full-width-card">
+        <h2><i class="fa-solid fa-chart-line" style="color: var(--primary); margin-right: 0.5rem;"></i> Spectroscopic Profile</h2>
+        {% if job.result.has_spectrum %}
+        <div style="height: 380px; position: relative;">
+            <canvas id="spectrumChart" style="width: 100%; height: 100%;"></canvas>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 4rem 1rem; color: var(--text-muted); font-style: italic;">
+            <i class="fa-solid fa-circle-exclamation" style="font-size: 2.5rem; color: var(--text-dim); margin-bottom: 1rem;"></i>
+            <p>Spectroscopic dataset was not found for this object in public SDSS logs. Spectrum is unavailable.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Initialize Aladin Lite
+    document.addEventListener("DOMContentLoaded", function() {
+        try {
+            const ra = {{ job.result.ra }};
+            const dec = {{ job.result.dec }};
+            
+            // Check if A (Aladin Lite global variable) is available
+            if (typeof A !== "undefined") {
+                let aladin = A.aladin('#aladin-lite-div', {
+                    survey: "P/DSS2/color", 
+                    coo: `${ra} ${dec}`, 
+                    fov: 0.12
+                });
+                
+                // Add marker layer
+                let markerLayer = A.catalog({color: '#7d5fff', name: 'Target Center'});
+                aladin.addCatalog(markerLayer);
+                
+                let marker = A.marker(ra, dec, {
+                    popupTitle: "{{ job.result.name }}",
+                    popupDesc: `RA: ${ra.toFixed(4)}, DEC: ${dec.toFixed(4)}`
+                });
+                markerLayer.addSources([marker]);
+            } else {
+                document.getElementById('aladin-lite-div').innerHTML = 
+                    `<div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-muted);">Aladin Lite CDN script failed to load.</div>`;
+            }
+        } catch (e) {
+            console.error("Failed to initialize Aladin Lite:", e);
+        }
+        
+        // Initialize Chart.js for spectrum
+        {% if job.result.has_spectrum %}
+        fetch('/output/{{ job.job_id }}/spectrum.json')
+            .then(res => res.json())
+            .then(data => {
+                // Downsample spectrum for rendering performance (max 600 points)
+                let wavelengths = data.wavelengths;
+                let flux = data.flux;
+                
+                if (wavelengths.length > 600) {
+                    const step = Math.floor(wavelengths.length / 600);
+                    wavelengths = wavelengths.filter((_, i) => i % step === 0);
+                    flux = flux.filter((_, i) => i % step === 0);
+                }
+                
+                const ctx = document.getElementById('spectrumChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: wavelengths.map(w => w.toFixed(1)),
+                        datasets: [{
+                            label: 'Flux (10^-17 erg/s/cm^2/Å)',
+                            data: flux,
+                            borderColor: '#7d5fff',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Observed Wavelength (Å)',
+                                    color: '#a4b0be',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#a4b0be', font: { family: 'SF Mono' } }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Flux',
+                                    color: '#a4b0be',
+                                    font: { family: 'Outfit' }
+                                },
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#a4b0be', font: { family: 'SF Mono' } }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            })
+            .catch(err => {
+                console.error("Failed to load spectrum JSON:", err);
+            });
+        {% endif %}
+    });
+</script>
+{% endblock %}

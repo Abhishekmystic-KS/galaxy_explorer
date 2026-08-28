@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Galaxy Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1 class="hero-title">Galaxy Intelligence Platform</h1>
+    <p class="hero-subtitle">Look up a galaxy by name or coordinates to fetch FITS imagery, extract physical parameters, perform cross-matching, and compile interactive reports.</p>
+    
+    <div class="search-box">
+        <form action="/job" method="POST">
+            <div class="form-group">
+                <input type="text" name="query" class="input-control" placeholder="Enter galaxy name (e.g. NGC 4321, M51) or Dec coords..." required>
+                <button type="submit" class="btn">
+                    <i class="fa-solid fa-magnifying-glass"></i> Analyze
+                </button>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                <p class="search-hint">Examples: <code>NGC 4321</code>, <code>M31</code>, <code>185.728, 15.822</code></p>
+                {% if rate_limited %}
+                <span style="color: var(--accent); font-size: 0.85rem; font-weight: 500;"><i class="fa-solid fa-triangle-exclamation"></i> Rate limit: 5 requests/min</span>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <h2 class="section-title"><i class="fa-solid fa-list-check" style="color: var(--primary);"></i> Recent Queries</h2>
+    
+    {% if jobs %}
+    <div class="recent-jobs-grid">
+        {% for job in jobs %}
+        <div class="job-card" onclick="window.location.href='/job/{{ job.job_id }}'">
+            <div class="job-header">
+                <span class="job-query">{{ job.query }}</span>
+                <span class="status-badge status-{{ job.status }}">{{ job.status }}</span>
+            </div>
+            <div class="job-body">
+                <p style="margin-bottom: 0.5rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                    {{ job.step_message or 'Queued' }}
+                </p>
+                {% if job.status == 'completed' and job.result %}
+                <p style="font-size: 0.85rem; color: var(--text-muted);">
+                    Type: {{ job.result.type }} | z: {{ job.result.redshift or 'N/A' }}
+                </p>
+                {% elif job.status == 'failed' %}
+                <p style="font-size: 0.85rem; color: var(--accent); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                    {{ job.error_message }}
+                </p>
+                {% endif %}
+            </div>
+            <div class="job-footer">
+                <span>ID: {{ job.job_id[:8] }}...</span>
+                <span>{{ job.created_at.split('T')[0] if 'T' in job.created_at else job.created_at }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="panel-card" style="text-align: center; color: var(--text-muted); padding: 3rem 1rem;">
+        <i class="fa-solid fa-chart-line" style="font-size: 3rem; color: var(--text-dim); margin-bottom: 1rem;"></i>
+        <p>No recent jobs. Enter a galaxy identifier above to initiate your first run!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Analyzing... - Galaxy Intelligence Platform{% endblock %}
+
+{% block content %}
+<div class="status-container">
+    <div class="status-spinner" id="spinner"></div>
+    <h1 style="font-size: 2rem; margin-bottom: 0.5rem;" id="title-text">Running Galaxy Analysis</h1>
+    <p style="color: var(--text-muted);" id="sub-text">Analyzing query: <strong>{{ job.query }}</strong></p>
+    
+    <div class="progress-bar-container">
+        <div class="progress-bar-fill" id="progress-bar" style="width: {{ job.progress }}%"></div>
+    </div>
+    
+    <p class="status-step" id="step-message">{{ job.step_message or 'Queued...' }}</p>
+    <p style="font-size: 0.85rem; color: var(--text-dim);" id="job-id-text">Job ID: {{ job.job_id }}</p>
+    
+    <div id="error-container" style="display: none; margin-top: 2rem; padding: 1rem; background: rgba(255, 71, 87, 0.1); border: 1px solid var(--accent); border-radius: 8px; text-align: left;">
+        <h3 style="color: var(--accent); margin-bottom: 0.5rem;"><i class="fa-solid fa-triangle-exclamation"></i> Analysis Failed</h3>
+        <p style="font-size: 0.9rem; color: var(--text-main);" id="error-message"></p>
+        <a href="/" class="btn" style="margin-top: 1rem; width: 100%; justify-content: center; padding: 0.8rem 1rem;">
+            <i class="fa-solid fa-arrow-left"></i> Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const jobId = "{{ job.job_id }}";
+    
+    async function pollStatus() {
+        try {
+            const response = await fetch(`/api/status/${jobId}`);
+            if (!response.ok) {
+                throw new Error("HTTP error " + response.status);
+            }
+            const data = await response.json();
+            
+            // Update UI elements
+            document.getElementById("progress-bar").style.width = data.progress + "%";
+            document.getElementById("step-message").innerText = data.step_message || "Processing...";
+            
+            if (data.status === "completed") {
+                // Done! Reload page to show result
+                window.location.reload();
+            } else if (data.status === "failed") {
+                // Show error
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("title-text").innerText = "Analysis Failed";
+                document.getElementById("step-message").style.display = "none";
+                
+                document.getElementById("error-message").innerText = data.error_message || "An unknown error occurred during FITS compilation.";
+                document.getElementById("error-container").style.display = "block";
+            } else {
+                // Continue polling
+                setTimeout(pollStatus, 2000);
+            }
+        } catch (error) {
+            console.error("Polling error:", error);
+            document.getElementById("step-message").innerText = "Connection lost. Re-trying...";
+            setTimeout(pollStatus, 3000);
+        }
+    }
+    
+    // Start polling if not already finished
+    const initialStatus = "{{ job.status }}";
+    if (initialStatus === "pending" || initialStatus === "running") {
+        setTimeout(pollStatus, 2000);
+    }
+</script>
+{% endblock %}
