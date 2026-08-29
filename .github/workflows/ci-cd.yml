@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -41,21 +41,3 @@ jobs:
 
       - name: Build image
         run: docker build -t galaxy-intelligence-platform:ci .
-
-  deploy:
-    name: Deploy to Render
-    needs:
-      - test
-      - docker-build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Validate deploy hook secret
-        run: |
-          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
-            echo "Missing secret: RENDER_DEPLOY_HOOK_URL"
-            exit 1
-          fi
-
-      - name: Trigger Render deploy
-        run: curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
