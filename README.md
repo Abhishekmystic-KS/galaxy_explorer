@@ -27,3 +27,16 @@ uv run uvicorn app:app --reload
 ```bash
 uv run pytest
 ```
+
+## CI/CD (GitHub Actions + Render)
+
+This repository includes a GitHub Actions workflow at:
+`/home/runner/work/galaxy_explorer/galaxy_explorer/.github/workflows/ci-cd.yml`
+
+Pipeline behavior:
+- On every push and pull request: installs dependencies, runs tests, and builds the Docker image.
+- On pushes to `main`: triggers deployment to Render.
+
+### Required secret for deployment
+Add this repository secret in GitHub:
+- `RENDER_DEPLOY_HOOK_URL`: your Render service deploy hook URL.
