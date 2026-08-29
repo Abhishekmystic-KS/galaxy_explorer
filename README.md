@@ -8,6 +8,7 @@ A web-based platform for exploring galaxies. Enter a galaxy name or coordinates 
 - FITS download and Astropy parsing.
 - SIMBAD and NED cross-matching.
 - Dynamic sky view using Aladin Lite v3.
+- Interactive 3D satellite field from nearby Gaia sources.
 - Spectrum plotting using Chart.js.
 - Downloadable HTML reports and reproducible Matplotlib scripts.
 - Rate limiting per IP.
