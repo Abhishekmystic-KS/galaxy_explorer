@@ -8,6 +8,8 @@
 <script src="https://aladin.cds.unistra.fr/AladinLite/api/v3/latest/aladin.js"></script>
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Plotly.js for 3D satellite viewer -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -134,6 +136,16 @@
         </p>
     </div>
 
+    <!-- 3D Satellite Viewer -->
+    <div class="panel-card full-width-card">
+        <h2><i class="fa-solid fa-satellite" style="color: var(--primary); margin-right: 0.5rem;"></i> 3D Satellite Field</h2>
+        <div id="satellite-3d-div" class="viewer-container"></div>
+        <div style="margin-top: 1rem; display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted);">
+            <span>Nearby Gaia sources around target center</span>
+            <span id="satellite-count-label">Loading...</span>
+        </div>
+    </div>
+
     <!-- Spectroscopic Profile -->
     <div class="panel-card full-width-card">
         <h2><i class="fa-solid fa-chart-line" style="color: var(--primary); margin-right: 0.5rem;"></i> Spectroscopic Profile</h2>
@@ -158,6 +170,7 @@
         try {
             const ra = {{ job.result.ra }};
             const dec = {{ job.result.dec }};
+            const satellitePoints = {{ job.result.satellite_points|default([], true)|tojson }};
             
             // Check if A (Aladin Lite global variable) is available
             if (typeof A !== "undefined") {
@@ -182,6 +195,100 @@
             }
         } catch (e) {
             console.error("Failed to initialize Aladin Lite:", e);
+        }
+
+        // Initialize Plotly 3D satellite field
+        try {
+            const satelliteCountLabel = document.getElementById("satellite-count-label");
+            const satelliteContainer = document.getElementById("satellite-3d-div");
+
+            if (typeof Plotly === "undefined") {
+                satelliteContainer.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-muted);">Plotly CDN script failed to load.</div>`;
+                satelliteCountLabel.textContent = "Unavailable";
+            } else if (!satellitePoints.length) {
+                satelliteContainer.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-muted);">No nearby Gaia sources found for 3D satellite rendering.</div>`;
+                satelliteCountLabel.textContent = "0 satellites";
+            } else {
+                const x = satellitePoints.map(p => p.x);
+                const y = satellitePoints.map(p => p.y);
+                const z = satellitePoints.map(p => p.z);
+                const markerSize = satellitePoints.map(p => {
+                    if (p.mag === null || p.mag === undefined) return 5;
+                    return Math.min(12, Math.max(4, 16 - p.mag));
+                });
+                const hoverText = satellitePoints.map((p, i) =>
+                    `Satellite ${i + 1}<br>x: ${p.x}"<br>y: ${p.y}"<br>Depth: ${p.z.toFixed(2)} pc<br>G mag: ${p.mag ?? "N/A"}<br>Parallax: ${p.parallax ?? "N/A"} mas`
+                );
+
+                const data = [
+                    {
+                        type: "scatter3d",
+                        mode: "markers",
+                        x, y, z,
+                        text: hoverText,
+                        hoverinfo: "text",
+                        marker: {
+                            size: markerSize,
+                            color: z,
+                            colorscale: "Viridis",
+                            opacity: 0.85,
+                            showscale: true,
+                            colorbar: { title: "Depth (pc)" }
+                        },
+                        name: "Satellites"
+                    },
+                    {
+                        type: "scatter3d",
+                        mode: "markers",
+                        x: [0],
+                        y: [0],
+                        z: [0],
+                        text: ["Target center"],
+                        hoverinfo: "text",
+                        marker: {
+                            size: 10,
+                            color: "#eb5757",
+                            symbol: "diamond"
+                        },
+                        name: "{{ job.result.name }}"
+                    }
+                ];
+
+                const layout = {
+                    margin: { l: 0, r: 0, t: 10, b: 0 },
+                    paper_bgcolor: "rgba(0,0,0,0)",
+                    plot_bgcolor: "rgba(0,0,0,0)",
+                    scene: {
+                        bgcolor: "#090a0f",
+                        xaxis: { title: "ΔRA (arcsec)", color: "#a4b0be", gridcolor: "rgba(255,255,255,0.08)" },
+                        yaxis: { title: "ΔDEC (arcsec)", color: "#a4b0be", gridcolor: "rgba(255,255,255,0.08)" },
+                        zaxis: { title: "Depth (pc)", color: "#a4b0be", gridcolor: "rgba(255,255,255,0.08)" },
+                        camera: { eye: { x: 1.7, y: 1.5, z: 1.2 } }
+                    },
+                    legend: {
+                        orientation: "h",
+                        y: -0.1,
+                        font: { color: "#a4b0be" }
+                    }
+                };
+
+                Plotly.newPlot("satellite-3d-div", data, layout, {
+                    responsive: true,
+                    displaylogo: false,
+                    modeBarButtonsToRemove: ["lasso3d", "select2d"]
+                });
+                satelliteCountLabel.textContent = `${satellitePoints.length} satellites`;
+            }
+        } catch (e) {
+            console.error("Failed to initialize 3D satellite field:", e);
+            const satelliteContainer = document.getElementById("satellite-3d-div");
+            if (satelliteContainer) {
+                satelliteContainer.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-muted);">Failed to render 3D satellite view.</div>`;
+            }
+            const satelliteCountLabel = document.getElementById("satellite-count-label");
+            if (satelliteCountLabel) {
+                satelliteCountLabel.textContent = "Unavailable";
+            }
         }
         
         // Initialize Chart.js for spectrum

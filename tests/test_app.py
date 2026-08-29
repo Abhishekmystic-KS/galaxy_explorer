@@ -85,6 +85,7 @@ def test_job_completed_render(mocker):
     assert "M 31" in response.text
     assert "Andromeda" in response.text
     assert "Gaia DR3 Astrometry" in response.text
+    assert "3D Satellite Field" in response.text
 
 
 def test_rate_limiting(mocker):
